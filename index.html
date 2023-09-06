@@ -3,137 +3,11 @@
 <body>
 <button id='startMusicBtn'>Start Music</button>
 
-<code>
-document.getElementById('startMusicBtn').addEventListener('click', initAndPlayMusic);
-document.getElementById('startMusicBtn').addEventListener('touchend', initAndPlayMusic); 
-   let audioContext;
-let gainNode;
-const chords = {
-    CMajor: {
-        C: 261.63,
-        MicrotonalE: (329.63 + 311.13) / 2,
-        G: 392.00
-    },
-    DMajor: {
-        D: 293.66,
-        MicrotonalFSharp: (369.99 + 349.23) / 2,
-        A: 440.00
-    }
-};
-const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
-let currentChord = 'CMajor';
-
-function initAndPlayMusic() {
-    if (!audioContext) {
-        audioContext = new AudioContext();
-        gainNode = audioContext.createGain();
-        gainNode.gain.value = 0.3;
-        gainNode.connect(audioContext.destination);
-    }
-
-    if (audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-
-    playKick();
-    playSnare();
-    playChord();
-}
-
-function playKick() {
-    const kickOsc = audioContext.createOscillator();
-    const kickGain = audioContext.createGain();
-
-    kickOsc.type = 'sine';
-    kickOsc.connect(kickGain);
-    kickGain.connect(audioContext.destination);
-
-    kickOsc.frequency.setValueAtTime(150, audioContext.currentTime);
-    kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-    kickGain.gain.setValueAtTime(2.5, audioContext.currentTime);
-    kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-    kickOsc.start(audioContext.currentTime);
-    kickOsc.stop(audioContext.currentTime + 0.5);
-
-    setTimeout(playKick, 500);
-}
-
-let reverb;
-let wetGain; // Gain for the reverberated sound
-let dryGain; // Gain for the original sound, so you can mix them
-
-const playSnare = () => {
-    // Create and set up the reverb only once
-    if (!reverb) {
-        reverb = audioContext.createConvolver();
-        wetGain = audioContext.createGain();
-        dryGain = audioContext.createGain();
-
-        const reverbBuffer = audioContext.createBuffer(2, audioContext.sampleRate * 2, audioContext.sampleRate);
-        for (let channel = 0; channel < 2; channel++) {
-            let samples = reverbBuffer.getChannelData(channel);
-            for (let i = 0; i < reverbBuffer.length; i++) {
-                samples[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / reverbBuffer.length, 3);
-            }
-        }
-        reverb.buffer = reverbBuffer;
-        
-        reverb.connect(wetGain);
-        wetGain.connect(audioContext.destination);
-        dryGain.connect(audioContext.destination);
-
-        // Set the reverb level (wet/dry)
-        wetGain.gain.value = 0.2;  // this can be adjusted
-        dryGain.gain.value = 0.8;  // this too
-    }
-    
-    const snareNode = audioContext.createBufferSource();
-    const snareGain = audioContext.createGain();
-    const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
-
-    let data = snareBuffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) {
-        data[i] = Math.random() * 2 - 1;
-    }
-
-    snareNode.buffer = snareBuffer;
-    snareNode.connect(reverb);
-    snareNode.connect(dryGain); // Direct sound to the output
-    snareNode.connect(snareGain);
-    snareGain.connect(audioContext.destination);
-
-    snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);  // Increased gain for louder snare
-    snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-
-    snareNode.start(audioContext.currentTime);
-    snareNode.stop(audioContext.currentTime + 0.2);
-
-    setTimeout(playSnare, 1500);
-};
-
-function playChord() {
-    for (let note in chords[currentChord]) {
-        const oscillator = audioContext.createOscillator();
-
-        oscillator.type = oscillatorTypes[Math.floor(Math.random() * oscillatorTypes.length)];
-        oscillator.frequency.setValueAtTime(chords[currentChord][note], audioContext.currentTime);
-        oscillator.connect(gainNode);
-
-        const randomStartTime = Math.random();
-        oscillator.start(audioContext.currentTime + randomStartTime);
-
-        const randomStopTime = 1 + Math.random() * 2;
-        oscillator.stop(audioContext.currentTime + randomStartTime + randomStopTime);
-    }
-
-    currentChord = (currentChord === 'CMajor') ? 'DMajor' : 'CMajor';
-    setTimeout(playChord, 3000);
-}
+<code id='codedisplay'>
 
 </code>
 
-  <script>
+  <script id='code'>
     document.getElementById('startMusicBtn').addEventListener('click', initAndPlayMusic);
 document.getElementById('startMusicBtn').addEventListener('touchend', initAndPlayMusic); 
    let audioContext;
@@ -214,8 +88,8 @@ const playSnare = () => {
         dryGain.connect(audioContext.destination);
 
         // Set the reverb level (wet/dry)
-        wetGain.gain.value = 0.4;  // this can be adjusted
-        dryGain.gain.value = 0.4;  // this too
+        wetGain.gain.value = 0.6;  // this can be adjusted
+        dryGain.gain.value = 0.2;  // this too
     }
     
     const snareNode = audioContext.createBufferSource();
@@ -240,7 +114,6 @@ const playSnare = () => {
     snareNode.stop(audioContext.currentTime + 0.2);
 
     setTimeout(playSnare, 1500);
-    setTimeout(playSnare, 1501);
 
 };
 
