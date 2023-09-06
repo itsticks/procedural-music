@@ -1,88 +1,94 @@
 <html>
+<button onclick="initAndPlayMusic()">Start Music</button>
+
 <code>
-  const playMicrotonalChordWithKickAndSnare = () => {
-    const audioContext = new AudioContext();
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.3;  // Reduce volume for chords
+  let audioContext;
+let gainNode;
+const chords = {
+    CMajor: {
+        C: 261.63,
+        MicrotonalE: (329.63 + 311.13) / 2,
+        G: 392.00
+    },
+    DMajor: {
+        D: 293.66,
+        MicrotonalFSharp: (369.99 + 349.23) / 2,
+        A: 440.00
+    }
+};
+const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
+let currentChord = 'CMajor';
 
-    // Frequencies for the chords
-    const chords = {
-        CMajor: {
-            C: 261.63,
-            MicrotonalE: (329.63 + 311.13) / 2,
-            G: 392.00
-        },
-        DMajor: {
-            D: 293.66,
-            MicrotonalFSharp: (369.99 + 349.23) / 2,
-            A: 440.00
-        }
-    };
+function initAndPlayMusic() {
+    if (!audioContext) {
+        audioContext = new AudioContext();
+        gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.3;
+        gainNode.connect(audioContext.destination);
+    }
 
-    const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
-    let currentChord = 'CMajor';
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
 
-    // Function to play a synthesized kick
-    const playKick = () => {
-        const kickOsc = audioContext.createOscillator();
-        const kickGain = audioContext.createGain();
+    playKick();
+    playSnare();
+    playChord();
+}
 
-        kickOsc.type = 'sine';
-        kickOsc.connect(kickGain);
-        kickGain.connect(audioContext.destination);
+function playKick() {
+    const kickOsc = audioContext.createOscillator();
+    const kickGain = audioContext.createGain();
 
-        kickOsc.frequency.setValueAtTime(150, audioContext.currentTime);
-        kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        kickGain.gain.setValueAtTime(2.5, audioContext.currentTime);  // Increased gain for louder kick
-        kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    kickOsc.type = 'sine';
+    kickOsc.connect(kickGain);
+    kickGain.connect(audioContext.destination);
 
-        kickOsc.start(audioContext.currentTime);
-        kickOsc.stop(audioContext.currentTime + 0.5);
+    kickOsc.frequency.setValueAtTime(150, audioContext.currentTime);
+    kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    kickGain.gain.setValueAtTime(2.5, audioContext.currentTime);
+    kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
-        setTimeout(playKick, 500);
-    };
+    kickOsc.start(audioContext.currentTime);
+    kickOsc.stop(audioContext.currentTime + 0.5);
 
-    // Function to play a synthesized snare
-    const playSnare = () => {
-        const snareNode = audioContext.createBufferSource();
-        const snareGain = audioContext.createGain();
-        const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
+    setTimeout(playKick, 500);
+}
 
-        let data = snareBuffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
+function playSnare() {
+    const snareNode = audioContext.createBufferSource();
+    const snareGain = audioContext.createGain();
+    const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
 
-        snareNode.buffer = snareBuffer;
-        snareNode.connect(snareGain);
-        snareGain.connect(audioContext.destination);
+    let data = snareBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
 
-        snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);  // Increased gain for louder snare
-        snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    snareNode.buffer = snareBuffer;
+    snareNode.connect(snareGain);
+    snareGain.connect(audioContext.destination);
 
-        snareNode.start(audioContext.currentTime);
-        snareNode.stop(audioContext.currentTime + 0.2);
+    snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);
+    snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
 
-        setTimeout(playSnare, 1500);
+    snareNode.start(audioContext.currentTime);
+    snareNode.stop(audioContext.currentTime + 0.2);
 
+    setTimeout(playSnare, 1500);
+}
 
-    };
-
-const playChord = () => {
+function playChord() {
     for (let note in chords[currentChord]) {
         const oscillator = audioContext.createOscillator();
-        
-        // Randomly select an oscillator type for each note in the chord
+
         oscillator.type = oscillatorTypes[Math.floor(Math.random() * oscillatorTypes.length)];
-        
         oscillator.frequency.setValueAtTime(chords[currentChord][note], audioContext.currentTime);
         oscillator.connect(gainNode);
-        
-        // Randomly determine the start time for each note up to 1 second delay
+
         const randomStartTime = Math.random();
         oscillator.start(audioContext.currentTime + randomStartTime);
 
-        // Randomly determine the stop time for each note between 1 to 3 seconds
         const randomStopTime = 1 + Math.random() * 2;
         oscillator.stop(audioContext.currentTime + randomStartTime + randomStopTime);
     }
@@ -91,99 +97,96 @@ const playChord = () => {
     setTimeout(playChord, 3000);
 }
 
-    gainNode.connect(audioContext.destination);
-    playKick();
-    playSnare();
-    playChord();
-};
-
-playMicrotonalChordWithKickAndSnare();
 </code>
 
   <script>
-    const playMicrotonalChordWithKickAndSnare = () => {
-    const audioContext = new AudioContext();
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.3;  // Reduce volume for chords
+   let audioContext;
+let gainNode;
+const chords = {
+    CMajor: {
+        C: 261.63,
+        MicrotonalE: (329.63 + 311.13) / 2,
+        G: 392.00
+    },
+    DMajor: {
+        D: 293.66,
+        MicrotonalFSharp: (369.99 + 349.23) / 2,
+        A: 440.00
+    }
+};
+const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
+let currentChord = 'CMajor';
 
-    // Frequencies for the chords
-    const chords = {
-        CMajor: {
-            C: 261.63,
-            MicrotonalE: (329.63 + 311.13) / 2,
-            G: 392.00
-        },
-        DMajor: {
-            D: 293.66,
-            MicrotonalFSharp: (369.99 + 349.23) / 2,
-            A: 440.00
-        }
-    };
+function initAndPlayMusic() {
+    if (!audioContext) {
+        audioContext = new AudioContext();
+        gainNode = audioContext.createGain();
+        gainNode.gain.value = 0.3;
+        gainNode.connect(audioContext.destination);
+    }
 
-    const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
-    let currentChord = 'CMajor';
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
 
-    // Function to play a synthesized kick
-    const playKick = () => {
-        const kickOsc = audioContext.createOscillator();
-        const kickGain = audioContext.createGain();
+    playKick();
+    playSnare();
+    playChord();
+}
 
-        kickOsc.type = 'sine';
-        kickOsc.connect(kickGain);
-        kickGain.connect(audioContext.destination);
+function playKick() {
+    const kickOsc = audioContext.createOscillator();
+    const kickGain = audioContext.createGain();
 
-        kickOsc.frequency.setValueAtTime(150, audioContext.currentTime);
-        kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        kickGain.gain.setValueAtTime(2.5, audioContext.currentTime);  // Increased gain for louder kick
-        kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    kickOsc.type = 'sine';
+    kickOsc.connect(kickGain);
+    kickGain.connect(audioContext.destination);
 
-        kickOsc.start(audioContext.currentTime);
-        kickOsc.stop(audioContext.currentTime + 0.5);
+    kickOsc.frequency.setValueAtTime(150, audioContext.currentTime);
+    kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    kickGain.gain.setValueAtTime(2.5, audioContext.currentTime);
+    kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
-        setTimeout(playKick, 500);
-    };
+    kickOsc.start(audioContext.currentTime);
+    kickOsc.stop(audioContext.currentTime + 0.5);
 
-    // Function to play a synthesized snare
-    const playSnare = () => {
-        const snareNode = audioContext.createBufferSource();
-        const snareGain = audioContext.createGain();
-        const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
+    setTimeout(playKick, 500);
+}
 
-        let data = snareBuffer.getChannelData(0);
-        for (let i = 0; i < data.length; i++) {
-            data[i] = Math.random() * 2 - 1;
-        }
+function playSnare() {
+    const snareNode = audioContext.createBufferSource();
+    const snareGain = audioContext.createGain();
+    const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
 
-        snareNode.buffer = snareBuffer;
-        snareNode.connect(snareGain);
-        snareGain.connect(audioContext.destination);
+    let data = snareBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
 
-        snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);  // Increased gain for louder snare
-        snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    snareNode.buffer = snareBuffer;
+    snareNode.connect(snareGain);
+    snareGain.connect(audioContext.destination);
 
-        snareNode.start(audioContext.currentTime);
-        snareNode.stop(audioContext.currentTime + 0.2);
+    snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);
+    snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
 
-        setTimeout(playSnare, 1500);
+    snareNode.start(audioContext.currentTime);
+    snareNode.stop(audioContext.currentTime + 0.2);
 
+    setTimeout(playSnare, 1500);
+}
 
-    };
-
-const playChord = () => {
+function playChord() {
     for (let note in chords[currentChord]) {
         const oscillator = audioContext.createOscillator();
-        
-        // Randomly select an oscillator type for each note in the chord
+
         oscillator.type = oscillatorTypes[Math.floor(Math.random() * oscillatorTypes.length)];
-        
         oscillator.frequency.setValueAtTime(chords[currentChord][note], audioContext.currentTime);
         oscillator.connect(gainNode);
-        
-        // Randomly determine the start time for each note up to 1 second delay
+
         const randomStartTime = Math.random();
         oscillator.start(audioContext.currentTime + randomStartTime);
 
-        // Randomly determine the stop time for each note between 1 to 3 seconds
         const randomStopTime = 1 + Math.random() * 2;
         oscillator.stop(audioContext.currentTime + randomStartTime + randomStopTime);
     }
@@ -192,12 +195,5 @@ const playChord = () => {
     setTimeout(playChord, 3000);
 }
 
-    gainNode.connect(audioContext.destination);
-    playKick();
-    playSnare();
-    playChord();
-};
-
-playMicrotonalChordWithKickAndSnare();
   </script>
 </html>
