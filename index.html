@@ -1,7 +1,12 @@
 <html>
-<button onclick="initAndPlayMusic()">Start Music</button>
+<head><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" /></head>
+<body>
+<button>Start Music</button>
 
 <code>
+document.getElementById('startMusicBtn').addEventListener('click', initAndPlayMusic);
+document.getElementById('startMusicBtn').addEventListener('touchend', initAndPlayMusic); 
+  
   let audioContext;
 let gainNode;
 const chords = {
@@ -100,6 +105,8 @@ function playChord() {
 </code>
 
   <script>
+    document.getElementById('startMusicBtn').addEventListener('click', initAndPlayMusic);
+document.getElementById('startMusicBtn').addEventListener('touchend', initAndPlayMusic); 
    let audioContext;
 let gainNode;
 const chords = {
@@ -196,4 +203,5 @@ function playChord() {
 }
 
   </script>
+</body>
 </html>
