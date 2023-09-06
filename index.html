@@ -6,8 +6,7 @@
 <code>
 document.getElementById('startMusicBtn').addEventListener('click', initAndPlayMusic);
 document.getElementById('startMusicBtn').addEventListener('touchend', initAndPlayMusic); 
-  
-  let audioContext;
+   let audioContext;
 let gainNode;
 const chords = {
     CMajor: {
@@ -60,7 +59,35 @@ function playKick() {
     setTimeout(playKick, 500);
 }
 
-function playSnare() {
+let reverb;
+let wetGain; // Gain for the reverberated sound
+let dryGain; // Gain for the original sound, so you can mix them
+
+const playSnare = () => {
+    // Create and set up the reverb only once
+    if (!reverb) {
+        reverb = audioContext.createConvolver();
+        wetGain = audioContext.createGain();
+        dryGain = audioContext.createGain();
+
+        const reverbBuffer = audioContext.createBuffer(2, audioContext.sampleRate * 2, audioContext.sampleRate);
+        for (let channel = 0; channel < 2; channel++) {
+            let samples = reverbBuffer.getChannelData(channel);
+            for (let i = 0; i < reverbBuffer.length; i++) {
+                samples[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / reverbBuffer.length, 3);
+            }
+        }
+        reverb.buffer = reverbBuffer;
+        
+        reverb.connect(wetGain);
+        wetGain.connect(audioContext.destination);
+        dryGain.connect(audioContext.destination);
+
+        // Set the reverb level (wet/dry)
+        wetGain.gain.value = 0.2;  // this can be adjusted
+        dryGain.gain.value = 0.8;  // this too
+    }
+    
     const snareNode = audioContext.createBufferSource();
     const snareGain = audioContext.createGain();
     const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
@@ -71,17 +98,19 @@ function playSnare() {
     }
 
     snareNode.buffer = snareBuffer;
+    snareNode.connect(reverb);
+    snareNode.connect(dryGain); // Direct sound to the output
     snareNode.connect(snareGain);
     snareGain.connect(audioContext.destination);
 
-    snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);
+    snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);  // Increased gain for louder snare
     snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
 
     snareNode.start(audioContext.currentTime);
     snareNode.stop(audioContext.currentTime + 0.2);
 
     setTimeout(playSnare, 1500);
-}
+};
 
 function playChord() {
     for (let note in chords[currentChord]) {
