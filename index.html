@@ -154,13 +154,23 @@ function playChord() {
     const panner = audioContext.createStereoPanner();
     panner.pan.value = panValue;
     panner.connect(gainNode);
+    
+    const bassGain = audioContext.createGain(); // Create a separate gain node for the bass
+    bassGain.gain.value = 0.3; // Set a value for the gain
+    bassGain.connect(audioContext.destination); // Connect it directly to the destination bypassing the panner
 
     for (let note in chords[currentChord]) {
         const oscillator = audioContext.createOscillator();
         
         oscillator.type = oscillatorTypes[Math.floor(Math.random() * oscillatorTypes.length)];
         oscillator.frequency.setValueAtTime(chords[currentChord][note], audioContext.currentTime);
-        oscillator.connect(panner);
+        
+        // If the note is a bass note, connect it to bassGain, else connect it to panner
+        if(note.endsWith('TwoOctavesDown')) {
+            oscillator.connect(bassGain);
+        } else {
+            oscillator.connect(panner);
+        }
 
         const randomStartTime = Math.random();
         oscillator.start(audioContext.currentTime + randomStartTime);
@@ -178,6 +188,7 @@ function playChord() {
     currentChord = (currentChord === 'CMajor') ? 'DMajor' : 'CMajor';
     setTimeout(playChord, 3000);
 }
+
 
 
   </script>
