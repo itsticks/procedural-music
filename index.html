@@ -9,7 +9,6 @@
 
   <script id='code'>
     document.getElementById('startMusicBtn').addEventListener('click', initAndPlayMusic);
-document.getElementById('startMusicBtn').addEventListener('touchend', initAndPlayMusic); 
    let audioContext;
 let gainNode;
 const chords = {
@@ -35,13 +34,11 @@ function initAndPlayMusic() {
         gainNode.connect(audioContext.destination);
     }
 
-    if (audioContext.state === 'suspended') {
-        audioContext.resume();
-    }
-
-    playKick();
-    playSnare();
-    playChord();
+    audioContext.resume().then(() => {
+        playKick();
+        playSnare();
+        playChord();
+    });
 }
 
 function playKick() {
