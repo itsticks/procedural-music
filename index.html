@@ -76,7 +76,7 @@ function playHiHat() {
 
 function playOpenHiHat() {
     const hiHatGain = audioContext.createGain();
-    hiHatGain.gain.value = 0.3;
+    hiHatGain.gain.value = 0.6;
     hiHatGain.connect(audioContext.destination);
   
     const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
