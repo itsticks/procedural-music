@@ -154,7 +154,7 @@ function playChord() {
     const panner = audioContext.createStereoPanner();
     panner.pan.value = panValue;
     panner.connect(gainNode);
-    
+
     const bassGain = audioContext.createGain(); // Create a separate gain node for the bass
     bassGain.gain.value = 0.3; // Set a value for the gain
     bassGain.connect(audioContext.destination); // Connect it directly to the destination bypassing the panner
@@ -168,15 +168,16 @@ function playChord() {
         // If the note is a bass note, connect it to bassGain, else connect it to panner
         if(note.endsWith('TwoOctavesDown')) {
             oscillator.connect(bassGain);
+            oscillator.start(audioContext.currentTime);  // Start the bass note immediately
+            oscillator.stop(audioContext.currentTime + 3);  // Set a fixed stop time for the bass note
         } else {
             oscillator.connect(panner);
+            const randomStartTime = Math.random();
+            oscillator.start(audioContext.currentTime + randomStartTime);
+
+            const randomStopTime = 1 + Math.random() * 2;
+            oscillator.stop(audioContext.currentTime + randomStartTime + randomStopTime);
         }
-
-        const randomStartTime = Math.random();
-        oscillator.start(audioContext.currentTime + randomStartTime);
-
-        const randomStopTime = 1 + Math.random() * 2;
-        oscillator.stop(audioContext.currentTime + randomStartTime + randomStopTime);
     }
 
     // Update pan value to slowly move from left (-1) to right (+1) and vice versa
@@ -186,7 +187,7 @@ function playChord() {
     }
 
     currentChord = (currentChord === 'CMajor') ? 'DMajor' : 'CMajor';
-    setTimeout(playChord, 3000);
+    setTimeout(playChord, 3000); // The interval matches the duration of the bass notes to create a seamless loop
 }
 
 
