@@ -227,7 +227,8 @@ function playChord() {
 }
 
     function speak() {
-    const message = new SpeechSynthesisUtterance('fuck you');
+    const message = new SpeechSynthesisUtterance('god fuck the king');
+      message.rate = 0.5; 
     window.speechSynthesis.speak(message);
     
     setTimeout(speak, 10000); // Schedule to speak every 10 seconds
