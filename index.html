@@ -145,13 +145,20 @@ const playSnare = () => {
 
 };
 
+let panValue = -1; // Initial pan value
+const panIncrement = 0.1; // Increment value to slowly pan from left to right
+
 function playChord() {
+    const panner = audioContext.createStereoPanner();
+    panner.pan.value = panValue;
+    panner.connect(gainNode);
+
     for (let note in chords[currentChord]) {
         const oscillator = audioContext.createOscillator();
-
+        
         oscillator.type = oscillatorTypes[Math.floor(Math.random() * oscillatorTypes.length)];
         oscillator.frequency.setValueAtTime(chords[currentChord][note], audioContext.currentTime);
-        oscillator.connect(gainNode);
+        oscillator.connect(panner);
 
         const randomStartTime = Math.random();
         oscillator.start(audioContext.currentTime + randomStartTime);
@@ -160,9 +167,16 @@ function playChord() {
         oscillator.stop(audioContext.currentTime + randomStartTime + randomStopTime);
     }
 
+    // Update pan value to slowly move from left (-1) to right (+1) and vice versa
+    panValue += panIncrement;
+    if (panValue >= 1 || panValue <= -1) {
+        panIncrement *= -1; // Reverse the panning direction when it reaches the extremes
+    }
+
     currentChord = (currentChord === 'CMajor') ? 'DMajor' : 'CMajor';
     setTimeout(playChord, 3000);
 }
+
 
   </script>
 </body>
