@@ -146,7 +146,7 @@ const playSnare = () => {
 };
 
 let panValue = -1; // Initial pan value
-const panIncrement = 0.1; // Increment value to slowly pan from left to right
+let panIncrement = 0.25; // Increment value to slowly pan from left to right
 
 function playChord() {
     const panner = audioContext.createStereoPanner();
