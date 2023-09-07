@@ -79,7 +79,7 @@ let kickCounter = 0;
 function playKick() {
     kickCounter++;
 
-    if (kickCounter % 3 !== 0) {
+    if (kickCounter % 9 !== 0) {
         const kickOsc = audioContext.createOscillator();
         const kickGain = audioContext.createGain();
 
