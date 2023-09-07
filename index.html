@@ -42,6 +42,7 @@ function initAndPlayMusic() {
         playChord();
       playHiHat();
       playOpenHiHat();
+      speak();
     });
 }
 
@@ -225,6 +226,12 @@ function playChord() {
     setTimeout(playChord, 3000); // The interval matches the duration of the bass notes to create a seamless loop
 }
 
+    function speak() {
+    const message = new SpeechSynthesisUtterance('fuck you');
+    window.speechSynthesis.speak(message);
+    
+    setTimeout(speak, 10000); // Schedule to speak every 10 seconds
+}
 
 
   </script>
