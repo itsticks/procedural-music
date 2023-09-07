@@ -41,6 +41,7 @@ function initAndPlayMusic() {
         playSnare();
         playChord();
       playHiHat();
+      playOpenHiHat();
     });
 }
 
@@ -71,6 +72,34 @@ function playHiHat() {
     noiseSource.stop(audioContext.currentTime + 0.05); // Short duration to mimic a closed hi-hat
 
     setTimeout(playHiHat, 1000 / 6); // Schedule to play 6 times per second
+}
+
+function playOpenHiHat() {
+    const hiHatGain = audioContext.createGain();
+    hiHatGain.gain.value = 0.3;
+    hiHatGain.connect(audioContext.destination);
+  
+    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
+    let data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noiseSource = audioContext.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const highpassFilter = audioContext.createBiquadFilter();
+    highpassFilter.type = "highpass";
+    highpassFilter.frequency.setValueAtTime(1000, audioContext.currentTime);
+    highpassFilter.Q.setValueAtTime(0.7, audioContext.currentTime);
+
+    noiseSource.connect(highpassFilter);
+    highpassFilter.connect(hiHatGain);
+
+    noiseSource.start(audioContext.currentTime);
+    noiseSource.stop(audioContext.currentTime + 0.4); // Increased duration to mimic an open hi-hat
+
+    setTimeout(playOpenHiHat, 3000); // Schedule to play every 3 seconds
 }
 
 
