@@ -15,12 +15,14 @@ const chords = {
     CMajor: {
         C: 261.63,
         MicrotonalE: (329.63 + 311.13) / 2,
-        G: 392.00
+        G: 392.00,
+        MicrotonalETwoOctavesDown: ((329.63 + 311.13) / 2) / 4, // MicrotonalE two octaves down
     },
     DMajor: {
         D: 293.66,
         MicrotonalFSharp: (369.99 + 349.23) / 2,
-        A: 440.00
+        A: 440.00,
+        MicrotonalFSharpTwoOctavesDown: ((369.99 + 349.23) / 2) / 4, // MicrotonalFSharp two octaves down
     }
 };
 const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
