@@ -67,6 +67,7 @@ function schedule() {
     timer++;
   let currentTime = audioContext.currentTime - startTime + 1;
   let newSixteenthNote = Math.floor(currentTime / sixteenthNoteTime);
+  spaceySirenBeatCounter = 0;
 
   if(newSixteenthNote !== currentSixteenthNote) {
     currentSixteenthNote = newSixteenthNote;
@@ -77,15 +78,20 @@ function schedule() {
 }
 
 function playDrums(note) {
-  // Keep track of the beats for spaceySiren and flute
+    if(((timer > 1800 && Math.random()>0.2))){
+       // spaceySirenBeatCounter = 0;
+        playSpaceSiren(note);
+    }
+  if((timer % 2800) < 1800){// Keep track of the beats for spaceySiren and flute
   spaceySirenBeatCounter = note % 32;
   fluteBeatCounter = note % 8;
-
+ // playSpaceSiren(note);
 
   // Only play the flute sound every 8 beats
   if (fluteBeatCounter === 0) {
     playFlute();
-  }else if(timer>1000){playSpaceSiren(note)}
+  } 
+
 
   if (note % 16 === 0 || note % 16 === 4 || note % 16 === 12) playKick();
   if (note % 16 === 2 || note % 16 === 6 || note % 16 === 10 || note % 16 === 14) playSnare();
@@ -131,6 +137,63 @@ function playDrums(note) {
 
 
   loopCounter++;
+}else{
+      // Keep track of the beats for spaceySiren and flute
+  spaceySirenBeatCounter = note % 32;
+  fluteBeatCounter = note % 8;
+
+  // Play the flute every 16 beats to slow down its appearance
+  if (fluteBeatCounter === 0) {
+    playFlute();
+  } 
+
+  // A new kick and snare pattern to vary the rhythm
+  if (note % 16 === 0 || note % 16 === 7 || note % 16 === 12) playKick();
+  if (note % 16 === 4 || note % 16 === 10 || note % 16 === 14) playSnare();
+
+  // Maintaining a steady hi-hat pattern but introducing some off-beat kicks for a groovier feel
+  if (note % 4 === 0) playHiHatClosed();
+  else if (note % 4 === 2) playKick();
+
+  // A new bassline pattern to pair with our new drum beat
+  if (note % 16 === 0) playBass(55); // G1
+  if (note % 16 === 3) playBass(52); // E1
+  if (note % 16 === 6) playBass(58); // A#1/Bb1
+  if (note % 16 === 9) playBass(50); // D1
+  if (note % 16 === 12) playBass(55); // G1
+
+  // Check if we are at the start of a 16 bar cycle
+  if (note % (16 * 16) === 0) {
+    loopCounter = 0;
+  }
+
+  // Playing a bongo fill at the start of a 4-bar cycle
+  if (note % (16 * 4) === 0) {
+    playBongoFill();
+  }
+
+  // Playing a snare roll every 32 notes to break up the rhythmic monotony
+  if (note % 32 === 0) {
+    playSnareRoll();
+  }
+
+  // Playing a bongo low at the start of a 16 bar cycle
+  if (note % (16 * 16) === 0) {
+    playBongoLow();
+    loopCounter = 0;
+  }
+
+  // Playing a bongo fill in the last bar of a 16-bar cycle
+  if (loopCounter >= (16 * 15) && loopCounter < (16 * 16)) {
+    if (note % 4 === 0) {
+      playBongoLow();
+    } else if (note % 4 === 2) {
+      playBongoHigh();
+    }
+  }
+
+  loopCounter++;
+}
 }
 
 function playFlute() {
@@ -176,30 +239,31 @@ function playSpaceSiren(note) {
     const osc2 = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     const filter = audioContext.createBiquadFilter();
+    var changing = audioContext.currentTime % 60;
 
     osc1.type = 'triangle'; 
     osc2.type = 'sawtooth'; 
 
-    osc1.frequency.setValueAtTime(300 + note * 20, audioContext.currentTime);
-    osc2.frequency.setValueAtTime(600 - note * 20, audioContext.currentTime);
+    osc1.frequency.setValueAtTime(300 + note * 20, changing);
+    osc2.frequency.setValueAtTime(600 - note * 20, changing);
 
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1200, audioContext.currentTime);
+    filter.frequency.setValueAtTime(1200, changing);
     
     osc1.connect(filter);
     osc2.connect(filter);
     filter.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(Math.random(), spaceySirenBeatCounter + sixteenthNoteTime * 4);
-    gainNode.gain.linearRampToValueAtTime(0, spaceySirenBeatCounter + sixteenthNoteTime * 8);
+    gainNode.gain.setValueAtTime(0, changing);
+    gainNode.gain.linearRampToValueAtTime(Math.random(), audioContext.currentTime + sixteenthNoteTime * 4);
+    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + sixteenthNoteTime * 8);
     
-    osc1.start(audioContext.currentTime);
-    osc2.start(audioContext.currentTime);
+    osc1.start(changing);
+    osc2.start(changing);
 
-    osc1.stop(audioContext.currentTime + sixteenthNoteTime * 8);
-    osc2.stop(audioContext.currentTime + sixteenthNoteTime * 8);
+    osc1.stop(changing + sixteenthNoteTime * 8);
+    osc2.stop(changing + sixteenthNoteTime * 8);
 }
 
 
@@ -210,7 +274,7 @@ function playBass(frequency) {
     osc.type = 'sawtooth';
     osc.connect(gain);
     gain.connect(audioContext.destination);
-    gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gain.gain.setValueAtTime(1, audioContext.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sixteenthNoteTime);
     osc.start(audioContext.currentTime);
     osc.stop(audioContext.currentTime + sixteenthNoteTime);
@@ -326,7 +390,7 @@ function playSnare() {
     }
 
     snareNode.buffer = snareBuffer;
-    if (Math.floor(loopCounter / 4) % 4 === 0 && Math.random()>0.9) {
+    if (Math.random()>0.95) {
     snareNode.connect(reverb);
     }
     snareNode.connect(dryGain); // Direct sound to the output
