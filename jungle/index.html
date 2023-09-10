@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drum Loop</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #ff6be6;
+    color: white;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<button id="startButton">Start</button>
+
+<script>
+let audioContext;
+let startTime;
+let tempo = 70; // In BPM
+let sixteenthNoteTime = (60 / tempo) / 4;
+let currentSixteenthNote = -1;
+let loopCounter = 0;
+let spaceySirenBeatCounter;
+let fluteBeatCounter;
+let hasSpaceySirenStarted = false;
+let timer = 0;
+
+let fluteIndex = 0;
+let fluteNotes = [261.63, 329.63, 293.66, 466.16, 349.23, 415.30, 277.18, 392.00, 493.88, 440.00, 311.13, 369.99]; // Shuffled C Dorian Scale
+
+function getNextFluteNote() {
+  let chance = Math.random();
+  if (chance < 0.2 && fluteIndex > 0) {
+    // 20% chance to repeat the last note
+    return fluteNotes[fluteIndex - 1];
+  } else if (chance < 0.6) {
+    // 40% chance to play the next note in sequence
+    fluteIndex = (fluteIndex + 1) % fluteNotes.length;
+    return fluteNotes[fluteIndex];
+  } else {
+    // 40% chance to skip one note ahead
+    fluteIndex = (fluteIndex + 2) % fluteNotes.length;
+    return fluteNotes[fluteIndex];
+  }
+}
+
+const rhythmPatterns = [1, 0.5, 1.5, 2, 0.75, 1.25]; 
+
+function startLoop() {
+  audioContext = new AudioContext();
+  startTime = audioContext.currentTime + 0.1;
+  requestAnimationFrame(schedule);
+}
+
+
+function schedule() {
+    timer++;
+  let currentTime = audioContext.currentTime - startTime + 1;
+  let newSixteenthNote = Math.floor(currentTime / sixteenthNoteTime);
+
+  if(newSixteenthNote !== currentSixteenthNote) {
+    currentSixteenthNote = newSixteenthNote;
+    playDrums(currentSixteenthNote);
+  }
+  
+  requestAnimationFrame(schedule);
+}
+
+function playDrums(note) {
+  // Keep track of the beats for spaceySiren and flute
+  spaceySirenBeatCounter = note % 32;
+  fluteBeatCounter = note % 8;
+
+
+  // Only play the flute sound every 8 beats
+  if (fluteBeatCounter === 0) {
+    playFlute();
+  }else if(timer>1000){playSpaceSiren(note)}
+
+  if (note % 16 === 0 || note % 16 === 4 || note % 16 === 12) playKick();
+  if (note % 16 === 2 || note % 16 === 6 || note % 16 === 10 || note % 16 === 14) playSnare();
+  if (note % 2 === 0) playHiHatClosed();
+  else playKick();
+
+  // Funky bassline pattern
+  if (note % 16 === 0) playBass(55); // G1
+  if (note % 16 === 3) playBass(58); // A#1/Bb1
+  if (note % 16 === 6) playBass(62); // D1
+  if (note % 16 === 9) playBass(58); // A#1/Bb1
+  if (note % 16 === 12) playBass(55); // G1
+
+  // Check if we are at the start of a 16 bar cycle
+  if (note % (16 * 16) === 0) {
+      loopCounter = 0;
+  }
+
+    // Check if we are at the start of a 4-bar cycle to play bongo fill
+    if (note % (16 * 4) === 0) {
+      playBongoFill();
+  }
+
+    // Play a fast marching snare roll every 6 bars
+    if (note % (8 * 2) === 0) {
+    playSnareRoll();
+  }
+
+    // Check if we are at the start of a 16 bar cycle to play the bongo fill
+    if (note % (16 * 16) === 0) {
+    playBongoLow();
+    loopCounter = 0;
+  }
+
+  // Playing bongo fill at every 16 bars, at the last bar (bar number 16)
+  if (loopCounter >= (16 * 15) && loopCounter < (16 * 16)) {
+    if (note % 4 === 0) {
+      playBongoLow();
+    } else if (note % 4 === 2) {
+      playBongoHigh();
+    }
+  }
+
+
+  loopCounter++;
+}
+
+function playFlute() {
+    const osc = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+    const lfo = audioContext.createOscillator();
+    const lfoGain = audioContext.createGain();
+
+    osc.type = 'sawtooth'; // Changing to a sawtooth wave to give a richer harmonic content
+    osc.frequency.value = getNextFluteNote() / 2; // Lower the frequency to get into the didgeridoo's typical range
+
+    filter.type = 'lowpass';
+    filter.frequency.value = 500; // Setting a starting frequency value for the filter
+    filter.Q.value = 1; // Adjust the Q value to shape the sound further
+
+    lfo.type = 'sine'; // Changing to a sine wave for smoother modulation
+    lfo.frequency.value = 0.25 + Math.random() * 0.5; // Lower the frequency for slower modulation, creating a more droning effect
+
+    lfoGain.gain.value = 50 + Math.random() * 100; 
+
+    osc.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency); // The LFO is connected to the filter's frequency parameter through the gain node to modulate it
+
+    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.01, audioContext.currentTime + sixteenthNoteTime * rhythmPatterns[Math.floor(Math.random() * rhythmPatterns.length)]);
+
+    osc.start(audioContext.currentTime);
+    lfo.start(audioContext.currentTime);
+    
+    osc.stop(audioContext.currentTime + sixteenthNoteTime * rhythmPatterns[Math.floor(Math.random() * rhythmPatterns.length)]);
+    lfo.stop(audioContext.currentTime + sixteenthNoteTime * rhythmPatterns[Math.floor(Math.random() * rhythmPatterns.length)]);
+
+    fluteIndex = (fluteIndex + 1) % fluteNotes.length;
+}
+
+function playSpaceSiren(note) {
+    const osc1 = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    osc1.type = 'triangle'; 
+    osc2.type = 'sawtooth'; 
+
+    osc1.frequency.setValueAtTime(300 + note * 20, audioContext.currentTime);
+    osc2.frequency.setValueAtTime(600 - note * 20, audioContext.currentTime);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1200, audioContext.currentTime);
+    
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(Math.random(), spaceySirenBeatCounter + sixteenthNoteTime * 4);
+    gainNode.gain.linearRampToValueAtTime(0, spaceySirenBeatCounter + sixteenthNoteTime * 8);
+    
+    osc1.start(audioContext.currentTime);
+    osc2.start(audioContext.currentTime);
+
+    osc1.stop(audioContext.currentTime + sixteenthNoteTime * 8);
+    osc2.stop(audioContext.currentTime + sixteenthNoteTime * 8);
+}
+
+
+function playBass(frequency) {
+    let osc = audioContext.createOscillator();
+    let gain = audioContext.createGain();
+    osc.frequency.value = frequency;
+    osc.type = 'sawtooth';
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sixteenthNoteTime);
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + sixteenthNoteTime);
+}
+
+function playBongoFill() {
+  // Here you will define how to play your bongo fill. 
+  // For demonstration, I am creating two oscillators with slightly different frequencies to simulate a bongo fill.
+
+  let bongo1 = audioContext.createOscillator();
+  let bongo2 = audioContext.createOscillator();
+  
+  let gainNode = audioContext.createGain();
+  bongo1.frequency.setValueAtTime(200, audioContext.currentTime);
+  bongo2.frequency.setValueAtTime(300, audioContext.currentTime);
+
+  bongo1.type = 'sine';
+  bongo2.type = 'sine';
+
+  bongo1.connect(gainNode);
+  bongo2.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+
+  gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sixteenthNoteTime * 4);
+  
+  bongo1.start(audioContext.currentTime);
+  bongo1.stop(audioContext.currentTime + sixteenthNoteTime * 4);
+
+  bongo2.start(audioContext.currentTime + sixteenthNoteTime * 2);
+  bongo2.stop(audioContext.currentTime + sixteenthNoteTime * 4 + sixteenthNoteTime * 2);
+}
+
+function playBongoLow() {
+  let osc = audioContext.createOscillator();
+  let gain = audioContext.createGain();
+  osc.frequency.value = 200;
+  osc.type = 'triangle';
+  osc.connect(gain);
+  gain.connect(audioContext.destination);
+  gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sixteenthNoteTime);
+  osc.start(audioContext.currentTime);
+  osc.stop(audioContext.currentTime + sixteenthNoteTime);
+}
+
+function playBongoHigh() {
+  let osc = audioContext.createOscillator();
+  let gain = audioContext.createGain();
+  osc.frequency.value = 250;
+  osc.type = 'triangle';
+  osc.connect(gain);
+  gain.connect(audioContext.destination);
+  gain.gain.setValueAtTime(0.5, audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sixteenthNoteTime);
+  osc.start(audioContext.currentTime);
+  osc.stop(audioContext.currentTime + sixteenthNoteTime);
+}
+
+function playKick() {
+    const kickOsc = audioContext.createOscillator();
+        const kickGain = audioContext.createGain();
+
+        kickOsc.type = 'sine';
+        kickOsc.connect(kickGain);
+        kickGain.connect(audioContext.destination);
+
+        kickOsc.frequency.setValueAtTime(150, audioContext.currentTime);
+        kickOsc.frequency.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        kickGain.gain.setValueAtTime(2.5, audioContext.currentTime);
+        kickGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+       
+        kickOsc.start(audioContext.currentTime);
+        kickOsc.stop(audioContext.currentTime + 0.5 * sixteenthNoteTime);
+}
+
+let reverb;
+let wetGain; // Gain for the reverberated sound
+let dryGain; // Gain for the original sound, so you can mix them
+
+function playSnare() {
+    if (!reverb) {
+        reverb = audioContext.createConvolver();
+        wetGain = audioContext.createGain();
+        dryGain = audioContext.createGain();
+
+        const reverbBuffer = audioContext.createBuffer(2, audioContext.sampleRate * 2, audioContext.sampleRate);
+        for (let channel = 0; channel < 2; channel++) {
+            let samples = reverbBuffer.getChannelData(channel);
+            for (let i = 0; i < reverbBuffer.length; i++) {
+                samples[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / reverbBuffer.length, 3);
+            }
+        }
+        reverb.buffer = reverbBuffer;
+        
+        reverb.connect(wetGain);
+        wetGain.connect(audioContext.destination);
+        dryGain.connect(audioContext.destination);
+
+        // Set the reverb level (wet/dry)
+        wetGain.gain.value = 0.3;  // this can be adjusted
+        dryGain.gain.value = 0.1;  // this too
+    }
+    
+    const snareNode = audioContext.createBufferSource();
+    const snareGain = audioContext.createGain();
+    const snareBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
+
+    let data = snareBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    snareNode.buffer = snareBuffer;
+    if (Math.floor(loopCounter / 4) % 4 === 0 && Math.random()>0.9) {
+    snareNode.connect(reverb);
+    }
+    snareNode.connect(dryGain); // Direct sound to the output
+    snareNode.connect(snareGain);
+    snareGain.connect(audioContext.destination);
+
+    snareGain.gain.setValueAtTime(1.5, audioContext.currentTime);  // Increased gain for louder snare
+    snareGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+
+    snareNode.start(audioContext.currentTime);
+    snareNode.stop(audioContext.currentTime + 0.5 * sixteenthNoteTime);
+}
+
+function playHiHatClosed() {
+    const hiHatGain = audioContext.createGain();
+    hiHatGain.gain.value = 0.5;
+    hiHatGain.connect(audioContext.destination);
+  
+    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
+    let data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+    }
+
+    const noiseSource = audioContext.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const highpassFilter = audioContext.createBiquadFilter();
+    highpassFilter.type = "highpass";
+    highpassFilter.frequency.setValueAtTime(1000, audioContext.currentTime);
+    highpassFilter.Q.setValueAtTime(0.7, audioContext.currentTime);
+
+    noiseSource.connect(highpassFilter);
+    highpassFilter.connect(hiHatGain);
+    noiseSource.start(audioContext.currentTime);
+    noiseSource.stop(audioContext.currentTime + 0.125 * sixteenthNoteTime);
+}
+
+function playHiHatOpen() {
+  let osc = audioContext.createOscillator();
+  osc.frequency.value = 400;
+  osc.type = "square";
+  osc.connect(audioContext.destination);
+  osc.start(audioContext.currentTime);
+  osc.stop(audioContext.currentTime + 0.25 * sixteenthNoteTime);
+}
+
+function playSnareRoll() {
+
+  // Create a noise buffer
+  const bufferSize = 2 * audioContext.sampleRate;
+  const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+  const output = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    output[i] = Math.random() * 2 - 1;
+  }
+
+  // Create a noise source
+  const noiseSource = audioContext.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
+
+  // Create a bandpass filter to shape the noise
+  const bandpass = audioContext.createBiquadFilter();
+  bandpass.type = 'bandpass';
+  bandpass.frequency.value = 1000;
+  bandpass.Q.value = 0.7;
+
+  // Create an envelope to shape the amplitude of the noise
+  const gain = audioContext.createGain();
+  gain.gain.setValueAtTime(0, audioContext.currentTime);
+  gain.gain.linearRampToValueAtTime(1, audioContext.currentTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+  // Connect everything
+  noiseSource.connect(bandpass);
+  bandpass.connect(gain);
+  gain.connect(audioContext.destination);
+
+  // Start the noise source
+  noiseSource.start(audioContext.currentTime);
+  noiseSource.stop(audioContext.currentTime + 0.3);
+}
+
+
+document.querySelector("#startButton").addEventListener("click", startLoop);
+</script>
+</body>
+</html>

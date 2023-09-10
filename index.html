@@ -14,19 +14,33 @@ let gainNode;
 const chords = {
     CMajor: {
         C: 261.63,
-        MicrotonalE: (329.63 + 311.13) / 2,
+        MicrotonalE: 329.63,
         G: 392.00,
-        MicrotonalETwoOctavesDown: ((329.63 + 311.13) / 2) / 4, // MicrotonalE two octaves down
+        MicrotonalETwoOctavesDown: 329.63 / 4, // MicrotonalE two octaves down
     },
     DMajor: {
         D: 293.66,
-        MicrotonalFSharp: (369.99 + 349.23) / 2,
+        MicrotonalFSharp: 369.99 / 2,
         A: 440.00,
-        MicrotonalFSharpTwoOctavesDown: ((369.99 + 349.23) / 2) / 4, // MicrotonalFSharp two octaves down
-    }
+        MicrotonalFSharpTwoOctavesDown: 369.99 / 4, // MicrotonalFSharp two octaves down
+    },
+    EMinor: {
+    E: 329.63,
+    G: 392.00,
+    B: 493.88,
+    ETwoOctavesDown: 329.63 / 4, 
+}
 };
 const oscillatorTypes = ['triangle', 'sawtooth', 'sine'];
 let currentChord = 'CMajor';
+
+let lastTime;
+let nextKickTime = 0;
+let nextSnareTime = 0;
+let nextHiHatTime = 0;
+let nextOpenHiHatTime = 0;
+let nextChordTime = 0;
+let nextSpeakTime = 0;
 
 function initAndPlayMusic() {
     if (!audioContext) {
@@ -37,19 +51,52 @@ function initAndPlayMusic() {
     }
 
     audioContext.resume().then(() => {
-        playKick();
-        playSnare();
-        playChord();
-      playHiHat();
-      playOpenHiHat();
-      speak();
+        lastTime = audioContext.currentTime;
+        requestAnimationFrame(update);
     });
+}
+
+function update() {
+    let currentTime = audioContext.currentTime;
+
+    if (currentTime >= nextKickTime) {
+        playKick();
+        nextKickTime += 0.5;
+    }
+
+    if (currentTime >= nextSnareTime) {
+        playSnare();
+        nextSnareTime += 1.5;
+    }
+
+    if (currentTime >= nextHiHatTime) {
+        playHiHat();
+        nextHiHatTime += 1.0 / 6.0;
+    }
+
+    if (currentTime >= nextOpenHiHatTime) {
+        playOpenHiHat();
+        nextOpenHiHatTime += 4.0;
+    }
+
+    if (currentTime >= nextChordTime) {
+        playChord();
+        nextChordTime += 4.0;
+    }
+
+    if (currentTime >= nextSpeakTime) {
+        speak();
+        nextSpeakTime += 10.0;
+    }
+
+    lastTime = currentTime;
+    requestAnimationFrame(update);
 }
 
     
 function playHiHat() {
     const hiHatGain = audioContext.createGain();
-    hiHatGain.gain.value = 0.3;
+    hiHatGain.gain.value = 0.1;
     hiHatGain.connect(audioContext.destination);
   
     const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1, audioContext.sampleRate);
@@ -72,12 +119,11 @@ function playHiHat() {
     noiseSource.start(audioContext.currentTime);
     noiseSource.stop(audioContext.currentTime + 0.05); // Short duration to mimic a closed hi-hat
 
-    setTimeout(playHiHat, 1000 / 6); // Schedule to play 6 times per second
 }
 
 function playOpenHiHat() {
     const hiHatGain = audioContext.createGain();
-    hiHatGain.gain.value = 0.6;
+    hiHatGain.gain.value = 0.3;
     hiHatGain.connect(audioContext.destination);
   
     const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
@@ -100,7 +146,6 @@ function playOpenHiHat() {
     noiseSource.start(audioContext.currentTime);
     noiseSource.stop(audioContext.currentTime + 0.4); // Increased duration to mimic an open hi-hat
 
-    setTimeout(playOpenHiHat, 4000); // Schedule to play every 3 seconds
 }
 
 
@@ -126,7 +171,6 @@ function playKick() {
         kickOsc.stop(audioContext.currentTime + 0.5);
     }
 
-    setTimeout(playKick, 500);
 }
 
 let reverb;
@@ -154,8 +198,8 @@ const playSnare = () => {
         dryGain.connect(audioContext.destination);
 
         // Set the reverb level (wet/dry)
-        wetGain.gain.value = 0.6;  // this can be adjusted
-        dryGain.gain.value = 0.2;  // this too
+        wetGain.gain.value = 0.3;  // this can be adjusted
+        dryGain.gain.value = 0.1;  // this too
     }
     
     const snareNode = audioContext.createBufferSource();
@@ -179,23 +223,21 @@ const playSnare = () => {
     snareNode.start(audioContext.currentTime);
     snareNode.stop(audioContext.currentTime + 0.2);
 
-    setTimeout(playSnare, 1500);
-
 };
 
 let panValue = 0; // Initial pan value
-let panIncrement = 0.4; // Increment value to slowly pan from left to right
+let panIncrement = 0.2; // Increment value to slowly pan from left to right
 
 function playChord() {
-    const panner = audioContext.createStereoPanner();
-    panner.pan.value = panValue;
-    panner.connect(gainNode);
-
     const bassGain = audioContext.createGain(); // Create a separate gain node for the bass
     bassGain.gain.value = 0.3; // Set a value for the gain
     bassGain.connect(audioContext.destination); // Connect it directly to the destination bypassing the panner
 
     for (let note in chords[currentChord]) {
+        const panner = audioContext.createStereoPanner();
+        panner.pan.value = Math.random() * 2 - 1; // Random panning value for each note
+        panner.connect(gainNode);
+
         const oscillator = audioContext.createOscillator();
         
         oscillator.type = oscillatorTypes[Math.floor(Math.random() * oscillatorTypes.length)];
@@ -216,22 +258,31 @@ function playChord() {
         }
     }
 
-    // Update pan value to slowly move from left (-1) to right (+1) and vice versa
-    panValue += panIncrement;
-    if (panValue >= 1 || panValue <= -1) {
-        panIncrement *= -1; // Reverse the panning direction when it reaches the extremes
-    }
-
-    currentChord = (currentChord === 'CMajor') ? 'DMajor' : 'CMajor';
-    setTimeout(playChord, 3000); // The interval matches the duration of the bass notes to create a seamless loop
+//     const chordsArray = ['CMajor', 'DMajor', 'EMinor'];
+// currentChord = chordsArray[Math.floor(Math.random() * chordsArray.length)];
+if (currentChord === 'CMajor') {
+    currentChord = 'DMajor';
+} else if (currentChord === 'DMajor') {
+    currentChord = 'EMinor';
+} else {
+    currentChord = 'CMajor';
 }
 
-    function speak() {
-    const message = new SpeechSynthesisUtterance('god fuck the king');
-      message.rate = 0.5; 
+}
+
+
+function speak() {
+    const voices = window.speechSynthesis.getVoices();
+    const message = new SpeechSynthesisUtterance('is it nature or is it nurture');
+
+    if (voices.length > 0) {
+        const randomVoice = voices[Math.floor(Math.random() * voices.length)];
+        message.voice = randomVoice;
+    }
+    message.volume = 1;
+    message.rate = 0.2;
     window.speechSynthesis.speak(message);
     
-    setTimeout(speak, 10000); // Schedule to speak every 10 seconds
 }
 
 
