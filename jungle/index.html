@@ -78,7 +78,7 @@ function schedule() {
 }
 
 function playDrums(note) {
-    if(((timer > 1800 && Math.random()>0.2))){
+    if(((timer>1200 && timer <2000 && Math.random()<0.2))){
        // spaceySirenBeatCounter = 0;
         playSpaceSiren(note);
     }
@@ -146,6 +146,7 @@ function playDrums(note) {
   if (fluteBeatCounter === 0) {
     playFlute();
   } 
+  if(timer>1000 && timer <2000 ){playSpaceySiren(note)}
 
   // A new kick and snare pattern to vary the rhythm
   if (note % 16 === 0 || note % 16 === 7 || note % 16 === 12) playKick();
@@ -234,12 +235,43 @@ function playFlute() {
     fluteIndex = (fluteIndex + 1) % fluteNotes.length;
 }
 
+function playSpaceySiren(note) {
+    const osc1 = audioContext.createOscillator();
+    const osc2 = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    const filter = audioContext.createBiquadFilter();
+
+    osc1.type = 'triangle'; 
+    osc2.type = 'sawtooth'; 
+
+    osc1.frequency.setValueAtTime(300 + note * 20, audioContext.currentTime);
+    osc2.frequency.setValueAtTime(600 - note * 20, audioContext.currentTime);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1200, audioContext.currentTime);
+    
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(Math.random(), spaceySirenBeatCounter + sixteenthNoteTime * 4);
+    gainNode.gain.linearRampToValueAtTime(0, spaceySirenBeatCounter + sixteenthNoteTime * 8);
+    
+    osc1.start(audioContext.currentTime);
+    osc2.start(audioContext.currentTime);
+
+    osc1.stop(audioContext.currentTime + sixteenthNoteTime * 8);
+    osc2.stop(audioContext.currentTime + sixteenthNoteTime * 8);
+}
+
 function playSpaceSiren(note) {
     const osc1 = audioContext.createOscillator();
     const osc2 = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
     const filter = audioContext.createBiquadFilter();
-    var changing = audioContext.currentTime % 60;
+    var changing = (audioContext.currentTime) % 60;
 
     osc1.type = 'triangle'; 
     osc2.type = 'sawtooth'; 
@@ -390,7 +422,7 @@ function playSnare() {
     }
 
     snareNode.buffer = snareBuffer;
-    if (Math.random()>0.95) {
+    if (Math.random()>0.92) {
     snareNode.connect(reverb);
     }
     snareNode.connect(dryGain); // Direct sound to the output
